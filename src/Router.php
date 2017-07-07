@@ -5,6 +5,7 @@
  */
 
 namespace Kewodoa\Routing;
+use Kewodoa\Routing\Route\BindingAdapter;
 use Kewodoa\Routing\Route\PatternResolver;
 
 /**
@@ -37,7 +38,13 @@ interface Router extends Matchable{
 	 * @return PatternResolver
 	 */
 	public function getPatternResolver();
-
+	
+	/**
+	 * @todo Необходимо поведение при отсутствии адаптера
+	 * @return BindingAdapter
+	 */
+	public function getBindingAdapter();
+	
 	/**
 	 * @param Matching $routing
 	 * @return \Generator|Matching[]

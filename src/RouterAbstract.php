@@ -4,11 +4,11 @@
  * @Project: php-router
  */
 namespace Kewodoa\Routing;
-use Kewodoa\Routing\Exception\SkipException;
-use Kewodoa\Routing\Matching;
-use Kewodoa\Routing\Route;
-use Kewodoa\Routing\Route\PatternResolver;
 
+use Kewodoa\Routing\Exception\Matching\SkipException;
+use Kewodoa\Routing\Route\BindingAdapter;
+use Kewodoa\Routing\Route\PatternResolver;
+use Kewodoa\Routing\Simple\SimpleMatching;
 
 /**
  * @Author: Alexey Kutuzov <lexus27.khv@gmail.com>
@@ -23,6 +23,8 @@ abstract class RouterAbstract implements Router{
 	/** @var  PatternResolver */
 	protected $pattern_resolver;
 
+	/** @var  BindingAdapter */
+	protected $binding_adapter;
 
 	/**
 	 * RouterAbstract constructor.
@@ -47,9 +49,9 @@ abstract class RouterAbstract implements Router{
 	public function matchLoop(Matching $matching){
 		foreach($this->routes as $route){
 			try{
-				$route->match($matching);
-				if($matching->isConformed()){
-					yield $matching;
+				$match = $route->match($matching);
+				if($match->isConformed()){
+					yield $match;
 				}
 			}catch (SkipException $skipping){
 				$matching->reset();
@@ -90,6 +92,32 @@ abstract class RouterAbstract implements Router{
 			$this->routes[$name] = $route;
 		}
 		return $this;
+	}
+	
+	public function getRoutes(){
+		return array_values($this->routes);
+	}
+	
+	/**
+	 * ИСП. ЕСЛИ: Единица Вычисления создается в Маршрутизаторе
+	 * @param $path
+	 * @return SimpleMatching
+	 */
+	public function factoryMatching($path){
+		return new SimpleMatching($path);
+	}
+	
+	/**
+	 * @param BindingAdapter $adapter
+	 * @return $this
+	 */
+	public function setBindingAdapter(BindingAdapter $adapter){
+		$this->binding_adapter = $adapter;
+		return $this;
+	}
+	
+	public function getBindingAdapter(){
+		return $this->binding_adapter;
 	}
 
 }

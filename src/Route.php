@@ -49,7 +49,7 @@ namespace Kewodoa\Routing;
  *  так и отрисовывающимся на базе входных параметров и объектов
  */
 interface Route extends Matchable{
-
+	
 	/**
 	 * @param Router $router
 	 * @return mixed
@@ -60,7 +60,7 @@ interface Route extends Matchable{
 	 * @return Router
 	 */
 	public function getRouter();
-
+	
 	/**
 	 * @param Matching $matching
 	 * @return Matching
@@ -68,7 +68,7 @@ interface Route extends Matchable{
 	public function match(Matching $matching);
 
 	/**
-	 * @param $params
+	 * @param  $params
 	 * @return string
 	 */
 	public function render($params);
@@ -87,6 +87,9 @@ interface Route extends Matchable{
 	 * @return array
 	 */
 	public function getDefaultParams();
+	
+	
+	public function getOptions();
 }
 
 

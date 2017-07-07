@@ -7,7 +7,9 @@
 namespace Kewodoa\Routing\Exception;
 
 
-class RenderingException{
+use Kewodoa\Routing\RoutingException;
+
+class RenderingException extends RoutingException{
 	
 }
 

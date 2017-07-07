@@ -4,11 +4,10 @@
  * @Project: php-router
  */
 
-namespace Kewodoa\Routing\Nested;
+namespace Kewodoa\Routing\Hierarchical;
 
 use Kewodoa\Routing\Matching;
 use Kewodoa\Routing\MatchingAbstract;
-use Kewodoa\Routing\Route;
 
 /**
  *
@@ -16,8 +15,8 @@ use Kewodoa\Routing\Route;
  * Чтобы не ограничивать при наличии Релешных маршрутов
  * @Author: Alexey Kutuzov <lexus27.khv@gmail.com>
  * Class MatchingDecorator
- * @package Kewodoa\Routing\Conjunction
- * todo Пересмотреть RouteConjunction для такого использования matching`а
+ * @package Kewodoa\Routing\ConjunctionRoute
+ * todo Пересмотреть ConjunctionRoute для такого использования matching`а
  */
 class MatchingDecorator extends MatchingAbstract{
 

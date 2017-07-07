@@ -6,8 +6,9 @@
 
 namespace Kewodoa\Routing;
 
-use Kewodoa\Routing\Exception\SkipException;
-use Kewodoa\Routing\Route;
+use Kewodoa\Routing\Exception\Matching\MissingException;
+use Kewodoa\Routing\Exception\Matching\SkipException;
+use Kewodoa\Routing\Exception\Matching\StabilizeException;
 
 /**
  * @Author: Alexey Kutuzov <lexus27.khv@gmail.com>
@@ -26,15 +27,15 @@ abstract class RouteAbstract implements Route{
 	/** @var  null|array */
 	protected $pattern_options;
 
-	/** @var array  */
-	protected $options = [];
-
 	/** @var mixed */
 	protected $reference;
 
 	/** @var array  */
 	protected $params = [];
-
+	
+	/** @var array  */
+	protected $options = [];
+	
 	/**
 	 * SimpleRouteAbstract constructor.
 	 * @param $pattern
@@ -42,8 +43,9 @@ abstract class RouteAbstract implements Route{
 	 * @param $reference
 	 */
 	public function __construct($reference, $pattern, $pattern_options = null){
-		$this->pattern      = $pattern;
-		$this->reference    = $reference;
+		$this->pattern          = $pattern;
+		$this->pattern_options  = $pattern_options;
+		$this->reference        = $reference;
 	}
 
 	/**
@@ -56,6 +58,14 @@ abstract class RouteAbstract implements Route{
 		}
 		return $this;
 	}
+	
+	public function setOptions(array $options){
+		$this->options = $options;
+		return $this;
+	}
+	public function getOptions(){
+		return $this->options;
+	}
 
 	/**
 	 * @return Router
@@ -67,12 +77,11 @@ abstract class RouteAbstract implements Route{
 		}
 		return $this->router;
 	}
-
-
+	
 	/**
 	 * @param Matching $matching
 	 * @return Matching
-	 * @throws SkipException
+	 * @throws \Kewodoa\Routing\Exception\Matching\SkipException
 	 */
 	public function match(Matching $matching){
 
@@ -98,7 +107,11 @@ abstract class RouteAbstract implements Route{
 		}
 		return $matching;
 	}
-
+	
+	/**
+	 * @param $params
+	 * @return string
+	 */
 	public function render($params){
 		$resolver = $this->getRouter()->getPatternResolver();
 		$params = $this->_prepareRenderParams($params);
@@ -147,14 +160,102 @@ abstract class RouteAbstract implements Route{
 	 * @param Matching $matching
 	 */
 	protected function _matchingConformed(Matching $matching){
+		$b = [
+			'classname' => 'UserClass',
+			'from' => 'user_id',
+			'to' => 'id',
+		];
+		
+		
 		$matching->setReference($this->reference);
-		$matching->setParams((array)$this->params, true);
+		
+		
+		
+		$pattern_params = $params = array_replace((array)$this->params, $matching->getParams());
+		
+		$bindings = isset($this->options['objects'])?$this->options['objects']:[];
+		
+		$delimiter = $this->getRouter()->getPatternResolver()->getPathDelimiter();
+		
+		if($delimiter){
+			foreach($this->getPatternParams() as $param_key_def){
+				$chunks = $this->_decomposite_path($param_key_def, $delimiter);
+				$container_key = $chunks[0];
+				if(isset($bindings[$container_key])){
+					$binding_rule = $bindings[$container_key];
+					$object_id = $params[$param_key_def];
+					$query_key = $this->_composite_path($chunks, $delimiter);
+					
+					$object = $this->_fetch_binding(
+						$query_key,$object_id, $binding_rule, $pattern_params, $param_key_def
+					);
+					$params[ $container_key ] = $this->_checkoutBoundedObject(
+						$object, $pattern_params, $container_key, $param_key_def
+					);
+					unset($params[$param_key_def]);
+				}
+			}
+		}
+		
+		$matching->setParams($params, true);
 	}
-
+	
+	protected function _decomposite_path($param, $path_delimiter){
+		return explode($path_delimiter,$param);
+	}
+	
+	protected function _composite_path($chunks, $path_delimiter){
+		array_shift($chunks);
+		return implode($path_delimiter, $chunks);
+	}
+	
+	/**
+	 * Выдача связанного объекта (Проверка и т.п)
+	 * @param object $object
+	 * @param array $pattern_params
+	 * @param $container_key
+	 * @param $param_key_def
+	 * @return object
+	 * @throws MissingException|SkipException
+	 */
+	protected function _checkoutBoundedObject($object,array $pattern_params, $container_key, $param_key_def){
+		if(!$object){
+			if(isset($this->options['static']) && $this->options['static']){
+				throw new MissingException();
+			}else{
+				throw new SkipException();
+			}
+		}
+		return $object;
+	}
+	
+	/**
+	 * Обрабатывает метаданные связывания, и берет нужный объект из бд
+	 * @param $field_path
+	 * @param $field_value
+	 * @param $binding_rule
+	 * @param array $pattern_params
+	 * @param null $full_path
+	 * @return null
+	 */
+	protected function _fetch_binding($field_path, $field_value, $binding_rule, $pattern_params = [], $full_path = null){
+		return $this->getRouter()->getBindingAdapter()->fetch($field_path, $field_value, $binding_rule, $pattern_params, $full_path);
+	}
+	
+	/**
+	 * Проверка окружения: выброс Skip в случае неудачи.
+	 *
+	 * @param Matching $matching
+	 */
 	protected function _checkEnv(Matching $matching){
-
+		
 	}
-
+	
+	/**
+	 * Подготовка массива параметров
+	 * @param $params
+	 * @return mixed
+	 */
 	protected function _prepareRenderParams($params){
 		return $params;
 	}

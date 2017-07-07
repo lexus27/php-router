@@ -7,8 +7,6 @@
 namespace Kewodoa\Routing;
 
 
-use Kewodoa\Routing\Nested\NestedRouteFactory;
-
 /**
  * @Author: Alexey Kutuzov <lexus27.khv@gmail.com>
  * Class FactoryDirector

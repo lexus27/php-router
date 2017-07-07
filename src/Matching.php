@@ -6,7 +6,7 @@
 
 namespace Kewodoa\Routing;
 
-use Kewodoa\Routing\Exception\SkipException;
+use Kewodoa\Routing\Exception\Matching\SkipException;
 
 
 /**
@@ -42,7 +42,12 @@ interface Matching{
 	 * @return array
 	 */
 	public function getParams();
-
+	
+	/**
+	 * @return Route
+	 */
+	public function getRoute();
+	
 	/**
 	 * @param Route $route
 	 * @return $this

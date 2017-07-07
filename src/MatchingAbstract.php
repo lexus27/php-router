@@ -5,9 +5,7 @@
  */
 
 namespace Kewodoa\Routing;
-use Kewodoa\Routing\Exception\SkipException;
-use Kewodoa\Routing\Matching;
-use Kewodoa\Routing\Route;
+use Kewodoa\Routing\Exception\Matching\SkipException;
 
 
 /**

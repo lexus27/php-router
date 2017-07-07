@@ -3,258 +3,192 @@
  * @created Alexey Kutuzov <lexus27.khv@gmail.com>
  * @Project: php-router
  */
+
+
 namespace Kewodoa\Routing;
-use Kewodoa\Routing\Conjunction\DeeperMatching;
-use Kewodoa\Routing\Conjunction\RouteConjunction;
-use Kewodoa\Routing\Nested\NestedRouteFactory;
-use Kewodoa\Routing\Nested\RouteRelay;
-use Kewodoa\Routing\Route\SimplePatternResolver;
+include '../vendor/autoload.php';
+
+use Kewodoa\Routing\Hierarchical\ConjunctionFactory;
+use Kewodoa\Routing\Hierarchical\ConjunctionRoute;
+use Kewodoa\Routing\Hierarchical\MatchingDecorator;
+use Kewodoa\Routing\Route\BindingAdapter;
 use Kewodoa\Routing\Simple\SimpleMatching;
+use Kewodoa\Routing\Simple\SimplePatternResolver;
 use Kewodoa\Routing\Simple\SimpleRoute;
 use Kewodoa\Routing\Simple\SimpleRouteFactory;
 use Kewodoa\Routing\Simple\SimpleRouter;
 
-include '../vendor/autoload.php';
-
-class Conjunction{}
-
-interface OpenedScope{
-
-	/**
-	 * @return OpenedScope
-	 */
-	public function getParent();
-
-	/**
-	 * @return Route
-	 */
-	public function getRoute();
-
-	/**
-	 * @return bool
-	 */
-	public function isSymbolic();
-
-}
-
-interface ConfigScope{
-
-	public function getPatternResolver();
-
-	public function getReferenceResolver();
-
-}
-interface StackRoutes{
-
-	public function getRoute($identifier);
-
-	public function addRoute(Route $route, $identifier = null);
-
-	public function indexOf(Route $route);
-
-	public function match(Matching $matching);
-
-}
-interface RouteAware{
-
-	public function getRoute();
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
 $resolver   = new SimplePatternResolver();
+$resolver->setPathDelimiter('__');
+
 $router     = new SimpleRouter($resolver);
 
-$route1     = new SimpleRoute('user:follow', '/users/(?<user_id>[1-9][0-9]+)/follow');
-$route2     = new SimpleRoute('user:create', '/users/(?<user_id>[1-9][0-9]+)/follow');
-$route3     = new SimpleRoute('user:follow', '/users/(?<user_id>[1-9][0-9]+)/follow');
-$route4     = new SimpleRoute('user:follow', '/users/(?<user_id>[1-9][0-9]+)/follow');
+$router->setBindingAdapter(new BindingAdapter());
 
-$router->addRoute($route1);
-$router->addRoute($route2);
-$router->addRoute($route3);
-$router->addRoute($route4);
+$director = new FactoryDirector($router);
 
+$director->setFactory(new ConjunctionFactory(),ConjunctionRoute::class);
+$director->setFactory(new SimpleRouteFactory(),SimpleRoute::class);
+$director->setDefault(SimpleRoute::class);
 
-$matching   = new SimpleMatching('/users/91/follow');
-$matching = $router->match($matching);
-
-$params = [
-	'user_id' => 12
-];
-$rendered_path = $route1->render($params);
-
-
-// Маршрут должен помещаться в какой-то стек для определения подходящего.
-// Маршруту нужен какой-то контекст настройки, это мог бы быть и Маршрутизатор(Стек)
-
-// Маршрут должен знать свой контекст настройки
-// Стек маршрутов должен знать маршруты
-
-/**
- *
- * Информация после маршрутизации:
- *      Ссылка на действие.
- *      Параметры для действия.
- *      Параметры для контекста.
- *      Узел в иерархии разделения, Родительский узел: получение родительского объекта.
- */
-echo htmlspecialchars($rendered_path);
-
-
-
-
-
-
-
-$примерноеОпределениеМассивами = [
-	//'name' => null, Имена определяются в регистре а не частно
-	'type'      => RouteConjunction::class,
-	'action'    => 'user:list',
-	'pattern'   => '/users',
-	//'symbolic'  => true, // or 'phantom' => true,
-	'children'  => [[
-		'action'    => 'user:create',
-		'pattern'   => '/create',
-	],[
-		'type'      => RouteConjunction::class,
-		'reference' => 'user:view',
-		'pattern'   => '/(?<uid>\d+)',
-		'children'  => [[
-			'action'    => 'user:delete',
-			'pattern'   => '/delete',
-		],[
-			'action'    => 'user:update',
-			'pattern'   => '/update',
-		]],
-	]]
-];
-
-$conjunction = (new RouteConjunction('user:list','/users'))
+/*
+// Не забыть: В данный момент матч может возвращять иной объект Matching , в связи с необходимостью проведения живой совпавшей цепи для реализации Locations в будущем
+$route = (new ConjunctionRoute('user:list','/users'))
 	->setRouter($router)
 	->addRoute(
 		(new SimpleRoute('user:create','/create'))->setRouter($router)
 	)
 	->addRoute(
-		(new RouteConjunction('user:view','/(?<uid>\d+)')) // matched destination on '/users/91'
-			->setRouter($router)
+		(new ConjunctionRoute('user:view','/(?<uid>\d+)')) // matched destination on '/users/91'
+		->setRouter($router)
 			->addRoute( (new SimpleRoute('user:update', '/update'))->setRouter($router) )
 			->addRoute( (new SimpleRoute('user:delete', '/delete'))->setRouter($router) )
+			->addRoute(
+				(new ConjunctionRoute('user:note:list','/notes'))
+					->setRouter($router)
+					->addRoute(
+						(new ConjunctionRoute('user:note:view','/(?<note_id>\d+)'))
+							->setRouter($router)
+							->addRoute( (new SimpleRoute('user:note:update', '/update'))->setRouter($router) )
+							->addRoute( (new SimpleRoute('user:note:delete', '/delete'))->setRouter($router) )
+					)
+					->addRoute(
+						(new SimpleRoute('user:note:add', '/add'))->setRouter($router)
+					)
+					->addRoute(
+						(new SimpleRoute('user:note:delete', '/delete'))->setRouter($router)
+					)
+			)
+	)->addRoute(
+		(new SimpleRoute('user:bo','/(?<babi>\d+)/ba'))->setRouter($router)
 	);
-
-
-// scope пока нету, пока без getParent()
-
-// todo: Обработка matchedConformed checkEnv. Разделение абстракции от реализации
-// Есть такой прикол, RouteConjunction и SimpleRoute разделены и никак не расширяют друг друга, тоесть при кастомизации
-// областных обработчиков мы не можем расчитывать на наследование, ни у одного класса ни у другого,
-// не реализована работа с \Closure например, тоесть с кастомными обработчиками matchedConformed и checkEnv
-// В пределах одной области может действовать уникальный PatternResolver к которому мы получаем доступ через Скоп
-// Резольвер работает с шаблоном и его параметрами, зафиксированными в маршруте
-// У маршрута так-же могут быть опции, и мы возможно можем их читать через спец объекты которым по паттерну Visitor
-// будет доступен использующий его в данный момент Маршрут гость
-// Можно ввести плагины в "Скоп", которые будут дотягиваться до частного поведения маршрута и определять свое поведение,
-// но базируясь на конфигах Самого Маршрута, считывание конфигов будет инкапсулированно в плагине, а определение конфига
-// к маршруту будет обрамленно в красивый интерфейс-определения такого типа маршрута
-$matching = new DeeperMatching('/users/91');
-$matching = $conjunction->match($matching);
-
-
-
-
-
-
-
-
-$p = '/users/91/notes/87/update';
-$p1 = '/users/91/ba';
-$matching = new SimpleMatching($p1);
-$result = $conjunction->match($matching);
-// Conjunction(Связка) ~~~ Relay(Реле)
-
-
-/**
- *
- * Стек это реле
- * маршруты не знают про родителя
- * но при матчинге реле, мы имеем декоратор
- *
- * Связь с родительским маршрутом со стороны дочернего, для получения его аттрибутов
- *
- * захват параметров из родительской цепочки
- * требование параметров из родительской цепочки и общий процессинг их перед отрисовкой ссылки
- * соединение шаблонов к конечному маршруту
- * соблюдение нужных очередей прохода по линейному стеку маршрутов
- *
- *
- * события
- * Сопоставление шаблона conformed
- * Проверка окружения
- * Достижение полного совпадение fulfilled Или Reached
- *
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-$director = new FactoryDirector($router);
-
-$director->setFactory(new NestedRouteFactory(),RouteRelay::class);
-$director->setFactory(new SimpleRouteFactory(),SimpleRoute::class);
-$director->setDefault(SimpleRoute::class);
-
-
+*/
 $route = $director->createRoute([
-	'type'      => RouteRelay::class,
-	'action'    => 'user:list',
-	'pattern'   => '/users',
-	//'symbolic'  => true, // or 'phantom' => true,
-	'children'  => [[
-		'action'    => 'user:create',
-		'pattern'   => '/create',
-	],[
-		'type'      => RouteRelay::class,
-		'reference' => 'user:view',
-		'pattern'   => '/(?<uid>\d+)',
-		'children'  => [[
-			'action'    => 'user:delete',
-			'pattern'   => '/delete',
+	'pattern' => '/users',
+	'action' => 'user:list',
+	'rules' => [[
+		'http.method' => 'get',
+	]],
+	'type' => ConjunctionRoute::class,
+	'children' => [
+		[
+			'pattern'   => '/(?<babi>\d+)/ba',
+			'action'    => 'user:bo',
+		], [
+			'pattern'   => '/create',
+			'action'    => 'user:create',
+			'form'      => [
+				'source' => 'http.post'
+			]
 		],[
-			'action'    => 'user:update',
-			'pattern'   => '/update',
-		]],
-	]]
+			'pattern'   => '/(?<user__id>\d+)',
+			'action'    => '#user.view',
+			'type'      => ConjunctionRoute::class,
+			'static'    => true,// если в базе данных не будет объекта с айди user__id то произойдет выброс 404
+			'rules'     => [
+				'http.method' => 'get'
+			],
+			'output'    => [ 'json', 'html' ],
+			'objects'   => [
+				'user' => 'UserClass'
+			],
+			'children'  => [
+				[
+					'pattern'   => '/update',
+					'action'    => 'user:update',
+					'form'      => [ 'source' => 'http.post' ]
+				], [
+					'pattern'   => '/delete',
+					'action'    => 'user:delete',
+				], [
+					'pattern'   => '/notes',
+					'action'    => 'user:note:list',
+					'type'      => ConjunctionRoute::class,
+					'children'  => [
+						[
+							'pattern' => '/(?<note__id>\d+)',
+							'action' => 'user:note:read',
+							'type' => ConjunctionRoute::class,
+							'children' => [
+								[
+									'pattern' => '/update',
+									'action' => 'user:note:update',
+								], [
+									'pattern' => '/delete',
+									'action' => 'user:note:delete',
+								]
+							],
+						], [
+							'pattern' => '/create',
+							'action' => 'user:note:create',
+						]
+					],
+				]
+			],
+		]
+	],
 ]);
 
-$d = 1;
+$path = $_SERVER['REQUEST_URI'];
+// встроить Работу с Объектами ORM, В маршрутизатор (CONVERTER)
+$matching = new SimpleMatching($path);
+$router->addRoute($route);
+$generator = $router->matchLoop($matching);
+foreach($generator as $match){
+	if($match->isReached()){
+		
+		$params     = $match->getParams();
+		$reference  = $match->getReference();
+		$route = $match->getRoute();
+		echo '<pre>';
+		print_r(['action' => $reference,'arguments' => $params, 'options' => $route->getOptions() ]);
+		echo '</pre>';
+		
+	}
+	
+}
+//$router->render('index:index:index','admin');
 
+$reached = $matching->isReached();
+
+if($reached){
+	
+	/**
+	 * Получение простых хлебных крошек на основе пути маршрутов (ИЕРАРХИЯ)
+	 */
+	
+	$m = $matching;
+	$a = [$m->getReference()];
+	while($m instanceof MatchingDecorator && $m = $m->getWrapped()){
+		$a[] = $m->getReference();
+	}
+	
+	$last = count($a)-1;
+	$a = array_reverse($a);
+	foreach($a as $i=>&$ref){
+		if($i<$last){
+			$ref = "<i>$ref</i>";
+		}else{
+			$ref = "<b style='color: cadetblue;'>$ref</b>";
+		}
+	}
+	
+	echo implode(' / ', $a);
+	
+}else{
+	
+}
+/**
+ * из Jungle:
+ *
+ * php-text-templaflect - Шаблоны
+ *
+ * HTTP запрос.
+ * Для форм:
+ *      POST параметры запроса, переходят в Route->getParam(field_name)
+ *      Редактирование.
+ *      Создание.
+ * При удалении - Редирект на коллекцию объектов того же типа (L - list action)
+ *
+ *
+ */

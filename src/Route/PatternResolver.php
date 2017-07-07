@@ -54,7 +54,11 @@ interface PatternResolver{
 	 * @return array|bool|false
 	 */
 	public function patternMatchStart($string, $pattern, $pattern_options = null, &$received_at_start = null);
-
+	
+	/**
+	 * @return string|false
+	 */
+	public function getPathDelimiter();
 
 }
 

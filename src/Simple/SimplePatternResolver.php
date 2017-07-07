@@ -4,7 +4,9 @@
  * @Project: php-router
  */
 
-namespace Kewodoa\Routing\Route;
+namespace Kewodoa\Routing\Simple;
+use Kewodoa\Routing\Route\PatternResolver;
+
 
 /**
  * @Author: Alexey Kutuzov <lexus27.khv@gmail.com>
@@ -16,6 +18,10 @@ class SimplePatternResolver implements PatternResolver{
 	/** @var array  */
 	protected $patterns = [];
 
+	protected $path_delimiter;
+	
+	
+	
 	/**
 	 * @param $pattern
 	 * @param $pattern_options
@@ -107,6 +113,15 @@ class SimplePatternResolver implements PatternResolver{
 			return $data;
 		}
 		return false;
+	}
+	
+	public function setPathDelimiter($delimiter = null){
+		$this->path_delimiter = $delimiter;
+		return $this;
+	}
+	
+	public function getPathDelimiter(){
+		return $this->path_delimiter;
 	}
 
 }
